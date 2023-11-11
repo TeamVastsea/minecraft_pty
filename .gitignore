@@ -22,3 +22,9 @@ rust-project.json
 .idea/MinecraftPty.iml
 .idea/modules.xml
 .idea/vcs.xml
+
+
+# Added by cargo
+
+/target
+.idea/workspace.xml
