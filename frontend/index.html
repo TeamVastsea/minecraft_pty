@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/xterm/css/xterm.css" />
+    <title>Xterm.js</title>
+</head>
+<body>
+    <section>
+        <div id="log" style="margin: 10px auto;">
+            <div class="" id="terminal"></div>
+        </div>
+    </section>
+
+    <script src="https://unpkg.com/xterm/lib/xterm.js"></script>
+    <script src="https://unpkg.com/xterm-addon-attach/lib/xterm-addon-attach.js"></script>
+    <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const WebSocketUrl = "ws://localhost:7890/ws/ssh";
+            const socket = new WebSocket(WebSocketUrl);
+
+            const term = new Terminal({
+                convertEol: true,
+                rows: 28,
+                fontSize: 14,
+                disableStdin: false,
+                cursorStyle: "block",
+                scrollback: 30,
+                tabStopWidth: 4,
+                theme: {
+                    foreground: "yellow",
+                    background: "#000",
+                    cursor: "help",
+                }
+            });
+
+            const attachAddon = new AttachAddon.AttachAddon(socket);
+            const fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(attachAddon);
+            term.loadAddon(fitAddon);
+
+            term.open(document.getElementById("terminal"));
+            term.focus();
+            fitAddon.fit();
+
+            term.prompt = () => {
+                term.write("\r\n$ ");
+                term.writeln("1");
+                term.write("\r\n$ ");
+                term.write("Hello World!");
+            };
+
+            term.prompt();
+
+            function _runTerminal() {
+                if (term._initialized) {
+                    return;
+                }
+
+                term._initialized = true;
+                term.write('\r\n');
+                term.prompt();
+
+                term.onData(function (key) {
+                    let order = {
+                        Data: key,
+                        Op: "stdin",
+                    };
+                    socket.send(JSON.stringify(order));
+                });
+            }
+
+            socket.onopen = () => {
+                _runTerminal();
+            };
+
+            socket.onclose = () => {
+                console.log("Socket closed.");
+            };
+
+            socket.onerror = () => {
+                console.log("Socket connection error.");
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                term.write(data.output);
+                term.prompt();
+            };
+        });
+    </script>
+</body>
+</html>
